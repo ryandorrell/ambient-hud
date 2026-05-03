@@ -1,0 +1,42 @@
+# Dependencies
+/node_modules
+
+# Build artifacts
+/dist
+/src-tauri/target
+/src-tauri/src-tauri/target
+
+# TypeScript
+*.tsbuildinfo
+*.tsmap
+*.js?(x)
+*.map
+
+# Build output
+/build
+/out
+
+# Tauri artifacts
+src-tauri/src-tauri/target/release/bundle/deb/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Development
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
+
+# Vite/React
+.vite/
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64/data.tar.gz
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64/control.tar.gz
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64.deb
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64.deb
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64/control.tar.gz
+src-tauri/target/release/bundle/deb/Ambient HUD_1.0.0_amd64/data.tar.gz
+src-tauri/target/release/bundle/rpm/Ambient HUD-1.0.0-1.x86_64.rpm
