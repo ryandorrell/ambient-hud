@@ -1,0 +1,740 @@
+/* ════════════════════════════════════════════════════
+   AMBIENT HUD — Sci-Fi Weather Station Interface
+   ════════════════════════════════════════════════════ */
+
+:root {
+  --bg-deep: #060a12;
+  --bg-panel: #0a1020;
+  --bg-panel-hover: #0e1428;
+  --cyan: #00e5ff;
+  --cyan-dim: rgba(0, 229, 255, 0.25);
+  --cyan-glow: rgba(0, 229, 255, 0.08);
+  --cyan-bright: #40f0ff;
+  --amber: #ffb300;
+  --red: #ff2244;
+  --green: #00ff88;
+  --text-primary: #c8e6f0;
+  --text-dim: rgba(200, 230, 240, 0.45);
+  --border-color: rgba(0, 229, 255, 0.15);
+  --border-active: rgba(0, 229, 255, 0.4);
+  --font-display: "Orbitron", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scan Lines Overlay ──────────────────────────── */
+
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 229, 255, 0.015) 2px,
+    rgba(0, 229, 255, 0.015) 4px
+  );
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+}
+
+/* ── Config Screen ───────────────────────────────── */
+
+.config-screen {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 50px,
+      rgba(0, 229, 255, 0.03) 50px,
+      rgba(0, 229, 255, 0.03) 51px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(0, 229, 255, 0.03) 50px,
+      rgba(0, 229, 255, 0.03) 51px
+    );
+}
+
+.config-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-active);
+  padding: 40px 48px;
+  width: 440px;
+  position: relative;
+  clip-path: polygon(
+    0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px,
+    100% calc(100% - 12px), calc(100% - 12px) 100%,
+    12px 100%, 0 calc(100% - 12px)
+  );
+  box-shadow: 0 0 40px rgba(0, 229, 255, 0.06), inset 0 0 30px rgba(0, 229, 255, 0.02);
+}
+
+.config-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-align: center;
+  letter-spacing: 3px;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+  margin-bottom: 4px;
+}
+
+.bracket {
+  color: var(--cyan-dim);
+}
+
+.config-subtitle {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 4px;
+  margin-bottom: 32px;
+}
+
+.config-field {
+  margin-bottom: 20px;
+}
+
+.config-field label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--cyan-dim);
+  margin-bottom: 6px;
+}
+
+.config-field input {
+  width: 100%;
+  background: rgba(0, 229, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.config-field input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+}
+
+.config-field input::placeholder {
+  color: var(--text-dim);
+}
+
+.connect-btn {
+  width: 100%;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 3px;
+  padding: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.connect-btn:hover {
+  background: rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+}
+
+.btn-icon {
+  margin-right: 8px;
+}
+
+.config-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 20px;
+}
+
+.cyan {
+  color: var(--cyan-dim);
+}
+
+/* ── HUD Root ────────────────────────────────────── */
+
+.hud-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 60px,
+      rgba(0, 229, 255, 0.02) 60px,
+      rgba(0, 229, 255, 0.02) 61px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 60px,
+      rgba(0, 229, 255, 0.02) 60px,
+      rgba(0, 229, 255, 0.02) 61px
+    );
+  padding: 0;
+}
+
+/* ── Top Bar ─────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 229, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hud-logo {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+}
+
+.station-name {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 3px 10px;
+  border: 1px solid;
+}
+
+.live-badge.live {
+  color: var(--green);
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.live-badge.offline {
+  color: var(--red);
+  border-color: rgba(255, 34, 68, 0.3);
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.clock {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+}
+
+.disconnect-btn {
+  background: none;
+  border: 1px solid rgba(255, 34, 68, 0.3);
+  color: var(--red);
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.disconnect-btn:hover {
+  background: rgba(255, 34, 68, 0.1);
+}
+
+/* ── Error Banner ────────────────────────────────── */
+
+.error-banner {
+  background: rgba(255, 34, 68, 0.08);
+  border-bottom: 1px solid rgba(255, 34, 68, 0.3);
+  color: var(--red);
+  font-size: 12px;
+  padding: 8px 20px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+/* ── Panel System ────────────────────────────────── */
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  position: relative;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--cyan-dim),
+    transparent
+  );
+}
+
+.panel:hover {
+  border-color: var(--border-active);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.04);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.panel-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: rgba(0, 229, 255, 0.7);
+  white-space: nowrap;
+}
+
+.panel-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.panel-body {
+  padding: 10px 14px 14px;
+}
+
+/* ── Main Grid ───────────────────────────────────── */
+
+.hud-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.5fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 1px;
+  padding: 12px;
+  min-height: 0;
+}
+
+/* Row 1 */
+.panel-temp { grid-column: 1; grid-row: 1; }
+.panel-feels { grid-column: 2; grid-row: 1; }
+.panel-humid { grid-column: 3; grid-row: 1; }
+.panel-wind { grid-column: 4; grid-row: 1 / 3; }
+
+/* Row 2 */
+.panel-baro { grid-column: 1; grid-row: 2; }
+.panel-rain { grid-column: 2 / 4; grid-row: 2; }
+
+/* Row 3 */
+.panel-uv { grid-column: 1 / 3; grid-row: 3; }
+.panel-indoor { grid-column: 3 / 5; grid-row: 3; }
+
+/* ── Typography ──────────────────────────────────── */
+
+.big-value {
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+  text-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+  margin: 4px 0;
+}
+
+.big-value.secondary {
+  color: var(--cyan-bright);
+  text-shadow: 0 0 12px rgba(64, 240, 255, 0.25);
+}
+
+.unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+.sub-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.sub-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.sub-value {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* ── Humidity Bar ─────────────────────────────────── */
+
+.humidity-bar {
+  height: 4px;
+  background: rgba(0, 229, 255, 0.08);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.humidity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  transition: width 1s ease;
+  box-shadow: 0 0 6px var(--cyan);
+}
+
+/* ── Wind ─────────────────────────────────────────── */
+
+.wind-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 0;
+}
+
+.compass-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.compass-svg {
+  width: 90%;
+  height: auto;
+  max-width: 220px;
+}
+
+.compass-label {
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.wind-arrow {
+  transition: transform 1s ease;
+}
+
+.compass-readout {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.compass-deg {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.compass-dir {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--cyan);
+  letter-spacing: 2px;
+}
+
+.wind-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  width: 100%;
+}
+
+.wind-speed {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+}
+
+.wind-val {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+  line-height: 1;
+}
+
+.wind-unit {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.wind-gusts {
+  display: flex;
+  gap: 20px;
+}
+
+.wind-detail {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+/* ── Pressure ─────────────────────────────────────── */
+
+.pressure-tag {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  border: 1px solid;
+  margin-top: 6px;
+}
+
+.tag-high { color: var(--green); border-color: rgba(0, 255, 136, 0.3); }
+.tag-normal { color: var(--cyan); border-color: var(--cyan-dim); }
+.tag-low { color: var(--amber); border-color: rgba(255, 179, 0, 0.3); }
+
+/* ── Rain Grid ────────────────────────────────────── */
+
+.rain-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 8px;
+}
+
+.rain-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rain-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.rain-val {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+/* ── UV / Solar ───────────────────────────────────── */
+
+.uv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.uv-index {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.uv-tag {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 2px 8px;
+  border: 1px solid;
+}
+
+.solar-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solar-val {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--amber);
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.2);
+}
+
+/* ── Indoor ───────────────────────────────────────── */
+
+.indoor-row {
+  display: flex;
+  gap: 32px;
+}
+
+.indoor-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.indoor-val {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.battery-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.batt-indicator {
+  font-size: 12px;
+  color: var(--green);
+}
+
+/* ── Footer ──────────────────────────────────────── */
+
+.hud-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  background: rgba(0, 229, 255, 0.01);
+}
+
+/* ── Animations ──────────────────────────────────── */
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+  50% { text-shadow: 0 0 20px rgba(0, 229, 255, 0.5); }
+}
+
+.panel-temp .big-value {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* ── Scrollbar ───────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyan-dim);
+}
+
+/* ── Selection ───────────────────────────────────── */
+
+::selection {
+  background: rgba(0, 229, 255, 0.2);
+  color: var(--cyan);
+}
