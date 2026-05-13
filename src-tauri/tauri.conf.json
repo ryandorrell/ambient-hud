@@ -15,7 +15,9 @@
         "title": "AMBIENT HUD // WEATHER STATION",
         "width": 1100,
         "height": 750,
-        "resizable": false,
+        "minWidth": 1100,
+        "minHeight": 750,
+        "resizable": true,
         "decorations": true,
         "transparent": false
       }
