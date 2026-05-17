@@ -84,9 +84,21 @@ struct DeviceResponse {
 }
 
 #[derive(Debug, Deserialize)]
+struct LatLng {
+    lat: Option<f64>,
+    lng: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CoordsWrapper {
+    coords: Option<LatLng>,
+}
+
+#[derive(Debug, Deserialize)]
 struct DeviceInfo {
     name: Option<String>,
     location: Option<String>,
+    coords: Option<CoordsWrapper>,
 }
 
 /// What we send back to the React frontend
@@ -95,8 +107,10 @@ pub struct StationPayload {
     pub station_name: String,
     pub location: String,
     pub mac_address: String,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
     pub data: WeatherData,
-    pub raw_keys: Vec<String>, // for debugging — shows all available fields
+    pub raw_keys: Vec<String>,
 }
 
 #[tauri::command]
@@ -144,12 +158,22 @@ async fn fetch_weather(api_key: String, app_key: String) -> Result<StationPayloa
     let info = device.info.unwrap_or(DeviceInfo {
         name: None,
         location: None,
+        coords: None,
     });
+
+    let (lat, lon) = info
+        .coords
+        .as_ref()
+        .and_then(|c| c.coords.as_ref())
+        .map(|ll| (ll.lat, ll.lng))
+        .unwrap_or((None, None));
 
     Ok(StationPayload {
         station_name: info.name.unwrap_or_else(|| "Unknown Station".into()),
         location: info.location.unwrap_or_else(|| "Unknown Location".into()),
         mac_address: device.mac_address.unwrap_or_default(),
+        lat,
+        lon,
         data,
         raw_keys,
     })

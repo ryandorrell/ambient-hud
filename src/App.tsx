@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import "./App.css";
 
 /* ── Types ────────────────────────────────────────── */
@@ -36,6 +38,8 @@ interface StationPayload {
   station_name: string;
   location: string;
   mac_address: string;
+  lat?: number;
+  lon?: number;
   data: WeatherData;
   raw_keys: string[];
 }
@@ -137,6 +141,115 @@ function ConfigScreen({
 
 function ScanLines() {
   return <div className="scanlines" />;
+}
+
+/* ── Radar Map ────────────────────────────────────── */
+
+interface RainViewerFrame {
+  time: number;
+  path: string;
+  nowcast?: boolean;
+}
+
+function RadarMap({ lat, lon }: { lat: number; lon: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const radarLayerRef = useRef<L.TileLayer | null>(null);
+  const framesRef = useRef<RainViewerFrame[]>([]);
+  const frameIdxRef = useRef(0);
+  const animTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const [frameTime, setFrameTime] = useState<Date | null>(null);
+  const [isNowcast, setIsNowcast] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [lat, lon],
+      zoom: 7,
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+    });
+
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      { subdomains: "abcd", maxZoom: 19 }
+    ).addTo(map);
+
+    // Station marker
+    L.circleMarker([lat, lon], {
+      radius: 5,
+      color: "#00e5ff",
+      fillColor: "#00e5ff",
+      fillOpacity: 0.9,
+      weight: 2,
+    }).addTo(map);
+
+    mapRef.current = map;
+
+    async function loadRadar() {
+      try {
+        const res = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+        const json = await res.json();
+        const past: RainViewerFrame[] = (json.radar?.past ?? []).map((f: RainViewerFrame) => ({ ...f, nowcast: false }));
+        const nowcast: RainViewerFrame[] = (json.radar?.nowcast ?? []).map((f: RainViewerFrame) => ({ ...f, nowcast: true }));
+        const frames = [...past, ...nowcast];
+        if (!frames.length) return;
+        framesRef.current = frames;
+        frameIdxRef.current = frames.length - 1;
+
+        const showFrame = (idx: number) => {
+          const prev = radarLayerRef.current;
+          const f = frames[idx];
+          const next = L.tileLayer(
+            `https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
+            { opacity: 0.7, maxZoom: 19 }
+          ).addTo(map);
+          next.once("load", () => {
+            if (prev) map.removeLayer(prev);
+          });
+          radarLayerRef.current = next;
+          setFrameTime(new Date(f.time * 1000));
+          setIsNowcast(!!f.nowcast);
+        };
+
+        showFrame(frameIdxRef.current);
+
+        animTimerRef.current = setInterval(() => {
+          frameIdxRef.current = (frameIdxRef.current + 1) % frames.length;
+          showFrame(frameIdxRef.current);
+        }, 4500);
+      } catch (_) {}
+    }
+
+    loadRadar();
+    const refreshTimer = setInterval(loadRadar, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(animTimerRef.current);
+      clearInterval(refreshTimer);
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [lat, lon]);
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div ref={containerRef} className="radar-map" />
+      {frameTime && (
+        <div className="radar-timestamp">
+          {frameTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}
+          {" · "}
+          {frameTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          {isNowcast && <span className="radar-nowcast"> FCST</span>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Wind Compass ─────────────────────────────────── */
@@ -451,10 +564,6 @@ export default function App() {
         <Panel title="PRECIPITATION" className="panel-rain">
           <div className="rain-grid">
             <div className="rain-cell">
-              <span className="rain-label">RATE</span>
-              <span className="rain-val">{fmt(d?.hourlyRainIn, 2)}"</span>
-            </div>
-            <div className="rain-cell">
               <span className="rain-label">TODAY</span>
               <span className="rain-val">{fmt(d?.dailyRainIn, 2)}"</span>
             </div>
@@ -462,20 +571,20 @@ export default function App() {
               <span className="rain-label">WEEK</span>
               <span className="rain-val">{fmt(d?.weeklyRainIn, 2)}"</span>
             </div>
-            <div className="rain-cell">
-              <span className="rain-label">MONTH</span>
-              <span className="rain-val">{fmt(d?.monthlyRainIn, 2)}"</span>
-            </div>
-            <div className="rain-cell">
-              <span className="rain-label">YEAR</span>
-              <span className="rain-val">{fmt(d?.yearlyRainIn, 2)}"</span>
-            </div>
-            <div className="rain-cell">
-              <span className="rain-label">EVENT</span>
-              <span className="rain-val">{fmt(d?.eventRainIn, 2)}"</span>
-            </div>
           </div>
         </Panel>
+
+        {/* Radar: col 3-4, rows 2-3 */}
+        <div className="panel panel-radar">
+          <div className="panel-header">
+            <span className="panel-dot" />
+            <span className="panel-title">RADAR</span>
+            <span className="panel-line" />
+          </div>
+          <div className="radar-body">
+            <RadarMap lat={28.300479} lon={-82.223837} />
+          </div>
+        </div>
 
         {/* Row 3: UV/Solar + Indoor */}
         <Panel title="UV / SOLAR" className="panel-uv">
@@ -520,17 +629,14 @@ export default function App() {
               </span>
             </div>
           </div>
-          <div className="battery-row">
-            <span className="sub-label">BATT</span>
-            <span className="batt-indicator">
-              {d?.battOut !== undefined ? (d.battOut === 1 ? "● OK" : "○ LOW") : "---"}
-            </span>
-          </div>
         </Panel>
       </main>
 
       {/* ── Footer ───────────────── */}
       <footer className="hud-footer">
+        <span className={`batt-indicator ${d?.battOut !== undefined && d.battOut !== 1 ? "batt-low" : ""}`}>
+          BATT: {d?.battOut !== undefined ? (d.battOut === 1 ? "● OK" : "○ LOW") : "---"}
+        </span>
         <span>
           LAST UPDATE:{" "}
           {lastFetch

@@ -415,15 +415,23 @@ body {
 .panel-temp { grid-column: 1; grid-row: 1; }
 .panel-feels { grid-column: 2; grid-row: 1; }
 .panel-humid { grid-column: 3; grid-row: 1; }
-.panel-wind { grid-column: 4; grid-row: 1 / 3; }
+.panel-wind { grid-column: 4; grid-row: 1; }
 
 /* Row 2 */
 .panel-baro { grid-column: 1; grid-row: 2; }
-.panel-rain { grid-column: 2 / 4; grid-row: 2; }
+.panel-rain { grid-column: 2; grid-row: 2; }
 
 /* Row 3 */
-.panel-uv { grid-column: 1 / 3; grid-row: 3; }
-.panel-indoor { grid-column: 3 / 5; grid-row: 3; }
+.panel-uv { grid-column: 1; grid-row: 3; }
+.panel-indoor { grid-column: 2; grid-row: 3; }
+
+/* Radar */
+.panel-radar {
+  grid-column: 3 / 5;
+  grid-row: 2 / 4;
+  display: flex;
+  flex-direction: column;
+}
 
 /* ── Typography ──────────────────────────────────── */
 
@@ -487,26 +495,23 @@ body {
 
 .wind-layout {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   height: 100%;
-  gap: 0;
+  gap: 0.75rem;
 }
 
 .compass-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .compass-svg {
-  width: 90%;
-  height: auto;
-  max-width: 13.75rem;
+  width: 5.5rem;
+  height: 5.5rem;
 }
 
 .compass-label {
@@ -541,19 +546,15 @@ body {
 .wind-bottom {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding-bottom: 0.625rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 0.625rem;
-  width: 100%;
+  justify-content: center;
+  gap: 0.375rem;
+  flex: 1;
 }
 
 .wind-speed {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  justify-content: center;
+  gap: 0.375rem;
 }
 
 .wind-val {
@@ -602,9 +603,9 @@ body {
 /* ── Rain Grid ────────────────────────────────────── */
 
 .rain-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.625rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .rain-cell {
@@ -621,7 +622,7 @@ body {
 
 .rain-val {
   font-family: var(--font-display);
-  font-size: 2.875rem;
+  font-size: 3rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1;
@@ -669,7 +670,8 @@ body {
 
 .indoor-row {
   display: flex;
-  gap: 2rem;
+  flex-direction: column;
+  gap: 0.625rem;
 }
 
 .indoor-row > div {
@@ -680,23 +682,17 @@ body {
 
 .indoor-val {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: 2.75rem;
   font-weight: 500;
   color: var(--text-primary);
 }
 
-.battery-row {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  margin-top: 0.625rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border-color);
+.batt-indicator {
+  color: var(--green);
 }
 
-.batt-indicator {
-  font-size: 0.75rem;
-  color: var(--green);
+.batt-indicator.batt-low {
+  color: var(--amber);
 }
 
 /* ── Footer ──────────────────────────────────────── */
@@ -711,6 +707,44 @@ body {
   letter-spacing: 1px;
   flex-shrink: 0;
   background: rgba(0, 229, 255, 0.01);
+}
+
+/* ── Radar Map ───────────────────────────────────── */
+
+.radar-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.radar-map {
+  position: absolute;
+  inset: 0;
+}
+
+.radar-map .leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-deep);
+}
+
+.radar-timestamp {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  z-index: 1000;
+  background: rgba(6, 10, 18, 0.75);
+  border: 1px solid var(--border-color);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 1.5px;
+  padding: 0.2rem 0.5rem;
+  pointer-events: none;
+}
+
+.radar-nowcast {
+  color: var(--amber);
 }
 
 /* ── Animations ──────────────────────────────────── */
